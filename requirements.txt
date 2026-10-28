@@ -1,0 +1,190 @@
+altair==6.3.0
+annotated-doc==0.0.5
+anyio==4.15.1
+attrs==26.1.0
+av==19.0.1
+certifi==2026.7.22
+cffi==2.1.1
+charset-normalizer==3.5.2
+click==8.5.0
+ctranslate2==4.8.2
+faster-whisper==1.2.1
+filelock==4.1.1
+flatbuffers==25.12.19
+fsspec==2026.9.0
+h11==0.16.0
+hf-xet==1.7.0
+httpcore2==2.13.1
+httptools==0.9.0
+httpx2==2.13.1
+huggingface-hub==2.2.0
+idna==3.20
+itsdangerous==2.2.0
+jinja2==3.1.6
+jsonschema==4.26.0
+jsonschema-specifications==2025.9.1
+markdown-it-py==4.2.0
+markupsafe==3.0.4
+mdurl==0.1.2
+mpmath==1.3.0
+narwhals==2.27.1
+networkx==3.7
+numpy==2.5.4
+onnxruntime==1.31.0
+packaging==26.3
+pandas==3.0.6
+pillow==12.3.0
+protobuf==7.36.2
+pyarrow==25.0.1
+pycparser==3.11
+pydeck==0.9.3
+pydub==0.25.1
+pygments==2.21.0
+python-dateutil==2.9.0.post0
+python-multipart==0.0.32
+pyyaml==6.0.3
+referencing==0.37.0
+regex==2026.9.29
+requests==2.34.2
+rich==15.0.0
+rpds-py==2026.9.1
+safetensors==0.8.0
+setuptools==84.0.0
+shellingham==1.5.4
+six==1.17.0
+soundfile==0.14.0
+starlette==1.8.0
+streamlit==1.65.0
+sympy==1.14.0
+tokenizers==0.23.3
+toml==0.10.2
+torch==2.14.1
+torchaudio==2.11.0
+tqdm==4.70.1
+transformers==5.19.0
+truststore==0.10.4
+typer==0.27.3
+typing-extensions==4.16.0
+urllib3==2.8.0
+uvicorn==0.54.0
+websockets==17.2
+
+ # AudioIntelligence
+
+A prototype that analyzes speech and environmental sounds together and answers
+questions using evidence from the recording.
+
+Built on pretrained models: **Faster-Whisper** (speech) and
+**Audio Spectrogram Transformer, AST** (sound events). No model was trained
+for this project.
+
+## What it does
+
+1. Upload an audio file (WAV, MP3, FLAC, OGG, M4A)
+2. Convert it to mono 16 kHz audio (FFmpeg)
+3. Transcribe speech with timestamps (Faster-Whisper)
+4. Detect sounds in sliding 3 s windows (AST), with speech classes removed
+5. Fuse both into one timeline, and rate sounds as strong, likely or weak
+6. Answer questions from that evidence, or say when evidence is insufficient
+
+## Requirements
+
+- macOS or Linux
+- Python 3.12 (3.14 may lack wheels for some ML packages)
+- FFmpeg installed and on PATH (`ffmpeg -version`)
+- Internet on first run to download models (about 140 MB to 460 MB for
+  Whisper, about 350 MB for AST)
+
+## Setup
+
+```bash
+cd ~/AudioIntelligence
+source .venv/bin/activate
+uv pip install -r requirements.txt
+```
+
+## Run the app
+
+```bash
+streamlit run app.py
+```
+
+Then open the URL shown in the terminal (usually http://localhost:8501).
+Upload a file, choose a speech model and language, click **Analyze**, and use
+the Transcript, Sounds, and Ask a question tabs.
+
+## Run from the terminal
+
+```bash
+python -m tests.test_pipeline data/sample_audio/mixed1.m4a
+```
+
+The result is saved to `outputs/<name>_analysis.json`.
+
+## Run the tests
+
+```bash
+python -m tests.test_audio
+python -m tests.test_fusion
+python -m tests.test_gaps
+python -m tests.test_qa
+```
+
+`tests.test_qa` reads `outputs/audio2_analysis.json`, so run the pipeline on
+`audio2.m4a` first.
+
+## Project structure
+
+```
+AudioIntelligence/
+├── app.py                    Streamlit interface
+├── requirements.txt
+├── services/
+│   ├── audio_processor.py    Validation and FFmpeg conversion
+│   ├── speech_service.py     Faster-Whisper transcription
+│   ├── sound_service.py      AST sound detection
+│   ├── fusion_service.py     Combines speech and sound evidence
+│   ├── qa_service.py         Rule-based, evidence-grounded answers
+│   └── audio_pipeline.py     Connects all services
+├── tests/
+├── data/sample_audio/
+└── outputs/                  Saved JSON results
+```
+
+## Example questions
+
+- What was said?
+- Was there a siren?
+- What sounds were heard when the speaker said explosions?
+- What was happening at 10 seconds?
+- How reliable is this?
+
+## Implemented
+
+- Audio validation and conversion
+- Speech transcription with timestamps and language detection
+- Sound detection in windows, with persistence-based confidence levels
+- Speech and sound alignment by time
+- Rule-based question answering with insufficient-evidence replies
+
+## Limitations
+
+- Pretrained models only; no training or fine-tuning was done.
+- Question answering is keyword-based and English only.
+- Sound timestamps are window-level, not exact event onsets.
+- Scores are model outputs, not calibrated probabilities.
+- Loud background sounds reduce transcript accuracy.
+- Quiet sounds under speech can be missed.
+- Detection in pauses between speech is implemented but has not been
+  validated on a real recording.
+- No formal evaluation (WER, sound F1) has been done yet.
+
+## Future work
+
+- Speaker diarization
+- Emotion and paralinguistic analysis
+- Multilingual evaluation, including Hindi and Marathi
+- Targeted sound detection with CLAP text prompts
+- LLM-based question answering
+- Learned audio-language fusion
+- Evaluation on a labelled test set
